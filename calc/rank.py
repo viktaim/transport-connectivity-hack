@@ -15,9 +15,11 @@ CRITERIA = {
 }
 
 EARTH_RADIUS_KM = 6371.0088
+NEUTRAL = 0.5
 TIE_EPS = 0.01
 
 def parse_number(raw):
+    """'1 540 000', '1,5', '55.79' -> float; пусто/нечисло -> None."""
     if raw is None:
         return None
     s = str(raw).strip().replace("\u00a0", "").replace(" ", "")
@@ -31,6 +33,7 @@ def parse_number(raw):
 
 
 def read_longlist(path):
+    """Возвращает список строк-словарей из longlist.csv."""
     with open(path, encoding="utf-8-sig", newline="") as f:
         sample = f.read(2048)
         f.seek(0)
@@ -44,11 +47,12 @@ def read_longlist(path):
             rows.append({(k or "").strip(): (v or "").strip() for k, v in r.items()})
     needed = {"city", "indicator", "value"}
     if not rows or not needed.issubset(rows[0].keys()):
-        sys.exit(f"Ошибка: в {path} должны быть колонки city, indicator, value.")
+        sys.exit(f"Ошибка: в {path} должны быть колонки city, indicator, value (и т.д. по ТЗ).")
     return rows
 
 
 def pivot(rows):
+    """Длинный формат -> {city: {indicator: float|None}}. Порядок городов сохраняется."""
     data = {}
     for r in rows:
         city, ind = r["city"], r["indicator"].lower()
@@ -62,6 +66,7 @@ def pivot(rows):
 
 
 def read_weights(path):
+    """Читает weights.yaml. Использует PyYAML, а при его отсутствии простой разбор 'ключ: число'."""
     text = Path(path).read_text(encoding="utf-8")
     weights = None
     try:
@@ -107,6 +112,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 def add_avg_dist(data):
+    """Считает avg_dist_to_others (среднее расстояние до остальных городов лонглиста)."""
     cities = [c for c in data if data[c].get("lat") is not None and data[c].get("lon") is not None]
     no_coords = [c for c in data if c not in cities]
     for c in no_coords:
@@ -122,6 +128,7 @@ def add_avg_dist(data):
 
 
 def normalize(data, criterion, higher_better):
+    """Min-max в 0-1; для «меньше лучше» инвертирует. Пропуски -> None."""
     vals = {c: d.get(criterion) for c, d in data.items()}
     present = [v for v in vals.values() if v is not None]
     if not present:
@@ -141,24 +148,28 @@ def normalize(data, criterion, higher_better):
 
 
 def rank(data, weights):
+    """Возвращает список строк результата, отсортированный по месту."""
     add_avg_dist(data)
     norm = {crit: normalize(data, crit, hb) for crit, hb in CRITERIA.items()}
 
     results = []
     for city in data:
         row = {"city": city}
+        imputed = []
         total = 0.0
         for crit in CRITERIA:
             raw = data[city].get(crit)
             n = norm[crit][city]
             row[crit] = raw
             if n is None:
-                print(f"Предупреждение: нет значения {crit} для «{city}», оценка принята 0.",
-                      file=sys.stderr)
-                n = 0.0
+                print(f"Предупреждение: нет значения {crit} для «{city}», "
+                      f"после нормировки принято {NEUTRAL} (assumption).", file=sys.stderr)
+                n = NEUTRAL
+                imputed.append(crit)
             row[f"{crit}_score"] = n
             total += weights[crit] * n
         row["total_score"] = total
+        row["imputed"] = ";".join(imputed)
         results.append(row)
 
     results.sort(key=lambda r: (-round(r["total_score"], 12), r["city"]))
@@ -170,11 +181,8 @@ def rank(data, weights):
 def write_ranking(results, path):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    cols = ["city"]
-    cols += [f"{c}_score" for c in CRITERIA]
-    cols += ["total_score", "rank"]
     raw_cols = list(CRITERIA)
-    header = ["city"] + raw_cols + [f"{c}_score" for c in CRITERIA] + ["total_score", "rank"]
+    header = ["city"] + raw_cols + [f"{c}_score" for c in CRITERIA] + ["total_score", "rank", "imputed"]
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(header)
@@ -184,7 +192,7 @@ def write_ranking(results, path):
                 v = r[c]
                 line.append("" if v is None else round(v, 3))
             line += [round(r[f"{c}_score"], 4) for c in CRITERIA]
-            line += [round(r["total_score"], 4), r["rank"]]
+            line += [round(r["total_score"], 4), r["rank"], r["imputed"]]
             w.writerow(line)
 
 
@@ -200,8 +208,8 @@ def print_summary(results):
             print(f"Внимание: 3-е и 4-е места почти равны (разница {gap:.4f}): "
                   f"«{results[2]['city']}» и «{results[3]['city']}» идут дальше (ТЗ, раздел 7).")
 
-
 def demo_data():
+    """Выдуманная мини-таблица из 4 городов (значения не реальные!)."""
     fake = {
         "Город А": dict(population=1_500_000, airport_pax=6_000_000, lat=56.84, lon=60.60,
                         competitor_hub=0, redwings_presence=1),
@@ -222,9 +230,6 @@ DEMO_WEIGHTS = {
     "competitor_hub": 0.10,
     "redwings_presence": 0.20,
 }
-
-
-# ---------------------------------------------------------------- main
 
 def main():
     ap = argparse.ArgumentParser(description="Рейтинг городов для хаба Red Wings")
