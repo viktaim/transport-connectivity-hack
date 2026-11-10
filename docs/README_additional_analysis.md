@@ -35,3 +35,11 @@ python -B calc/economics_dashboard.py
 
 После обновления исходных результатов экономики пересоберите демо командой
 `python -B calc/strategy_t1.py`.
+
+## Оптимизация сети при равных блок-часах
+
+Запуск: `python -B calc/network_optimizer.py`.
+
+[Математическая модель](network_optimization.md) описывает ограничения,
+целевую функцию и допущения. Результаты — [сводка по лимитам](../out/network_optimizer_summary.csv)
+и [распределение частот](../out/network_optimizer_routes.csv).
