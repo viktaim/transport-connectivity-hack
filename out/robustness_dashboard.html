@@ -1,0 +1,15 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Wings — устойчивость выбора хаба</title><style>
+body{font:16px system-ui;max-width:960px;margin:40px auto;padding:0 20px;background:#f5f7fb;color:#14223b}
+section{background:white;padding:24px;border-radius:14px;margin:18px 0}
+.row{display:grid;grid-template-columns:190px 1fr 70px;gap:12px;align-items:center;margin:12px 0}
+.track{height:22px;border-radius:8px;background:#e5e9f0;overflow:hidden}
+.fill{height:100%;background:#3b65c6}.hint{color:#536273}
+@media(max-width:570px){.row{grid-template-columns:110px 1fr 55px;font-size:12px}}
+</style><h1>Red Wings: устойчивость рейтинга</h1>
+<p class="hint">1000 случайных вариаций весов, фиксированный набор из 12 городов. Частота попадания в топ-3 — не вероятность окупаемости хаба.</p>
+<section><h2>Базовый топ-3</h2><p>Казань, Екатеринбург, Нижний Новгород</p></section>
+<section><h2>Частота попадания в топ-3</h2><div class="row"><span>Казань</span><div class="track"><div class="fill" style="width:96.6%"></div></div><b>96.6%</b></div><div class="row"><span>Нижний Новгород</span><div class="track"><div class="fill" style="width:93.8%"></div></div><b>93.8%</b></div><div class="row"><span>Екатеринбург</span><div class="track"><div class="fill" style="width:70.7%"></div></div><b>70.7%</b></div><div class="row"><span>Уфа</span><div class="track"><div class="fill" style="width:34.0%"></div></div><b>34.0%</b></div><div class="row"><span>Новосибирск</span><div class="track"><div class="fill" style="width:2.7%"></div></div><b>2.7%</b></div><div class="row"><span>Сочи</span><div class="track"><div class="fill" style="width:2.2%"></div></div><b>2.2%</b></div><div class="row"><span>Самара</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div><div class="row"><span>Челябинск</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div><div class="row"><span>Пермь</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div><div class="row"><span>Краснодар</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div><div class="row"><span>Ростов-на-Дону</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div><div class="row"><span>Красноярск</span><div class="track"><div class="fill" style="width:0.0%"></div></div><b>0.0%</b></div></section>
+<section><h2>Достоверность</h2><p>Монте-Карло использует оценку 0.5 для отсутствующего airport_pax.
+Подробная таблица стресс-теста: <a href="missing_sensitivity.csv">missing_sensitivity.csv</a>.</p></section>
+</html>
