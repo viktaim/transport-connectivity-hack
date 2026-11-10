@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Wings T1 · Стратегия роста</title>
+<style>
+:root{color-scheme:light;--ink:#222336;--accent:#a61143;--soft:#f8edf2;--line:#e9dbe1}
+body{max-width:940px;margin:0 auto;padding:22px 14px 40px;color:var(--ink);background:#fcfafb;font:16px/1.5 system-ui,sans-serif}
+header,section{background:white;border:1px solid var(--line);border-radius:14px;margin-bottom:16px;padding:20px}
+h1,h2,p{margin:0 0 12px}h1{font-size:clamp(26px,5vw,43px);line-height:1.1}
+.tag{color:var(--accent);font-weight:700}
+.controls,.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:14px 0}
+label{display:grid;gap:4px;font-size:14px}
+input,select,button{font:inherit;color:inherit;border:1px solid #937a86;border-radius:8px;padding:8px;background:white;min-width:0}
+button{cursor:pointer}button:hover{background:var(--soft)}
+.card,#trip{background:var(--soft);border-radius:8px;padding:10px}
+.card b{display:block;font-size:22px}
+small{display:block;color:#55455a}.buttons{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:clamp(12px,2.6vw,16px)}
+th,td{text-align:left;padding:7px;border-bottom:1px solid var(--line)}
+</style></head>
+<body>
+<header><p class="tag">Кейс №5 · T1</p><h1>Red Wings · От пилота к цели №2</h1>
+<p>2027 — проверяем прямые частоты и экран поездки. 2028 — тестируем защищённые пересадки в Казани при подтверждённом спросе и доступном флоте.</p></header>
+<section>
+<h2>Какой масштаб нужен</h2>
+<p>2025 год · 2,7 млн пассажиров Red Wings и 13,8 млн у «Победы». Сравниваем отдельные авиакомпании по годовому пассажиропотоку, включая внутренние и международные линии.</p>
+<form class="controls" id="capacity">
+<label>Горизонт <input id="horizon" type="number" min="2026" max="2040" value="2032" required></label>
+<label>Рост ориентира в год, % <input id="growth" type="number" min="-10" max="20" step="0.5" value="0" required></label>
+<label>Кресел на сегмент <input id="seats" type="number" min="1" max="700" value="100" required></label>
+<label>Загрузка, % <input id="load" type="number" min="1" max="100" value="75" required></label>
+<label>Сегментов в сутки на борт <input id="legs" type="number" min="1" max="12" value="4" required></label>
+<label>Лётных дней на борт <input id="days" type="number" min="1" max="365" value="330" required></label>
+</form>
+<div class="cards" id="capacity-result" aria-live="polite"></div>
+<small>Модель мощности от базы 2025 года. Самолёто-годы — эквивалент годовой мощности при заданных параметрах. Сегмент — перелёт в одну сторону.</small>
+</section>
+<section>
+<h2>Что даёт маршрутный пилот</h2>
+<div class="controls">
+<label>Год <select id="year"><option>2027</option><option>2028</option></select></label>
+<label>Сценарий <select id="scenario"><option value="base">Базовый</option><option value="cautious">Осторожный</option></select></label>
+</div>
+<table><thead><tr><th>Гипотеза</th><th>Доп. пассажиры</th><th>Билетная выручка</th><th>От разрыва 2025</th></tr></thead>
+<tbody id="pilot" aria-live="polite"></tbody></table>
+<small>Гипотезы пересекаются по маршрутам и сравниваются отдельно. Частоты, загрузка, тарифы и доля новых пассажиров — допущения. Выручка показана до расходов.</small>
+</section>
+<section>
+<h2>Демо · Моя поездка</h2>
+<p>Условный маршрут Новосибирск → Казань → Самара. Выберите канал покупки и действие. Состояния демонстрационные, используются тестовые данные.</p>
+<label>Канал покупки <select id="channel"><option value="own">Red Wings</option><option value="agent">Агентство</option></select></label>
+<div class="buttons" id="actions">
+<button type="button" data-action="bag">Добавить багаж</button>
+<button type="button" data-action="refund">Проверить возврат</button>
+<button type="button" data-action="connection">Задержка и стыковка</button>
+</div><p id="trip" role="status">Выберите действие.</p>
+<small>В пилоте измеряем завершение подходящих операций без помощи поддержки, время решения и качество защищённых стыковок.</small>
+</section>
+<small>Источники · <a href="https://www.favt.gov.ru/novosti-novosti/?id=17763">Росавиация</a> ·
+<a href="https://flyredwings.com/en/press/news/red-wings-poluchila-dve-nagrady-naczionalnoj-aviaczionnoj-premii-krylya-rossii/">Red Wings</a> ·
+<a href="https://www.interfax.ru/business/1067812">Интерфакс</a> · маршрутная модель команды (economics_results.csv).
+Демо работает офлайн, интернет нужен для перехода к внешним источникам.</small>
+<script>
+"use strict";
+const model = {"baseYear": 2025, "redWings": 2700000, "benchmark": 13800000, "pilot": [{"year": "2027", "scenario": "base", "hypothesis": "hub", "passengers_new": 31200, "revenue_new_rub": 254280000}, {"year": "2027", "scenario": "base", "hypothesis": "direct", "passengers_new": 42120, "revenue_new_rub": 332280000}, {"year": "2027", "scenario": "cautious", "hypothesis": "hub", "passengers_new": 5616, "revenue_new_rub": 37908000}, {"year": "2027", "scenario": "cautious", "hypothesis": "direct", "passengers_new": 11232, "revenue_new_rub": 71604000}, {"year": "2028", "scenario": "base", "hypothesis": "hub", "passengers_new": 62400, "revenue_new_rub": 508560000}, {"year": "2028", "scenario": "base", "hypothesis": "direct", "passengers_new": 56160, "revenue_new_rub": 443040000}, {"year": "2028", "scenario": "cautious", "hypothesis": "hub", "passengers_new": 22464, "revenue_new_rub": 151632000}, {"year": "2028", "scenario": "cautious", "hypothesis": "direct", "passengers_new": 22464, "revenue_new_rub": 143208000}]};
+const byId = (id) => document.getElementById(id);
+const fmt = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 2}).format;
+
+function estimate({horizon, growth, seats, load, legs, days}) {
+    const years = horizon - model.baseYear;
+    const target = model.benchmark * (1 + growth / 100) ** years;
+    const gap = Math.max(0, target - model.redWings);
+    const growthNeeded = ((target / model.redWings) ** (1 / years) - 1) * 100;
+    const requiredSeats = Math.ceil(gap / (load / 100));
+    const requiredLegs = Math.ceil(requiredSeats / seats);
+    const aircraftYears = Math.ceil(requiredLegs / (legs * days));
+    return {target, gap, growthNeeded, requiredSeats, requiredLegs, aircraftYears};
+}
+
+function renderCapacity() {
+    const ids = ["horizon", "growth", "seats", "load", "legs", "days"];
+    const fields = ids.map(byId);
+    const result = byId("capacity-result");
+    if (fields.some((field) => !field.validity.valid)) {
+        result.textContent = "Проверьте допустимые значения полей.";
+        return;
+    }
+    const calc = estimate(Object.fromEntries(fields.map((field) => [field.id, field.valueAsNumber])));
+    const cards = [
+        ["Ориентир конкурента", fmt(calc.target / 1e6) + " млн"],
+        ["Разрыв к базе 2025", fmt(calc.gap / 1e6) + " млн"],
+        ["Требуемый среднегодовой рост", fmt(calc.growthNeeded) + "%"],
+        ["Дополнительные кресла", fmt(calc.requiredSeats)],
+        ["Дополнительные сегменты", fmt(calc.requiredLegs)],
+        ["Условные самолёто-годы", fmt(calc.aircraftYears)]
+    ];
+    result.innerHTML = cards.map(([label, value]) =>
+        `<div class="card"><b>${value}</b>${label}</div>`).join("");
+}
+
+function renderPilot() {
+    const year = byId("year").value;
+    const scenario = byId("scenario").value;
+    const gap = model.benchmark - model.redWings;
+    byId("pilot").innerHTML = model.pilot
+        .filter((row) => row.year === year && row.scenario === scenario)
+        .map((row) => {
+            const name = row.hypothesis === "hub" ? "Хаб в Казани" : "Прямые рейсы";
+            return `<tr><th scope="row">${name}</th><td>${fmt(row.passengers_new)}</td>
+            <td>${fmt(row.revenue_new_rub)} ₽</td><td>${fmt(100 * row.passengers_new / gap)}%</td></tr>`;
+        }).join("");
+}
+
+const messages = {
+    own: {
+        bag: "Доступные варианты багажа и итоговая цена показаны до подтверждения покупки.",
+        refund: "Проверяем тариф. Если возврат доступен, показываем сумму и просим подтвердить.",
+        connection: "На едином билете показываем оба сегмента и статус стыковки. При риске пропуска показываем доступные варианты переоформления."
+    },
+    agent: {
+        bag: "Проверяем доступность услуги для этого заказа. При ограничении показываем, к кому обратиться.",
+        refund: "Билет оформлен у партнёра. Показываем продавца, номер заказа и куда обратиться за возвратом.",
+        connection: "Показываем статус и проверяем, защищена ли стыковка. Действия зависят от типа билета и канала покупки."
+    }
+};
+byId("capacity").addEventListener("input", renderCapacity);
+byId("year").addEventListener("change", renderPilot);
+byId("scenario").addEventListener("change", renderPilot);
+byId("actions").addEventListener("click", (event) => {
+    const action = event.target.dataset.action;
+    if (action) byId("trip").textContent = messages[byId("channel").value][action];
+});
+byId("channel").addEventListener("change", () => {
+    byId("trip").textContent = "Выберите действие для этого канала покупки.";
+});
+renderCapacity();
+renderPilot();
+</script></body></html>
